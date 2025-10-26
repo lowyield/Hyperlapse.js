@@ -3,57 +3,174 @@
 <head> 
 	<title>Simple Example</title> 
 
-        <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false" type="text/javascript"></script>
+        <script>
+                (function() {
+                        var STORAGE_KEY = 'hyperlapse-gmaps-key';
+                        var googleMapsPromise;
+
+                        function getStoredKey() {
+                                try {
+                                        return sessionStorage.getItem(STORAGE_KEY);
+                                } catch (err) {
+                                        return null;
+                                }
+                        }
+
+                        function storeKey(key) {
+                                try {
+                                        sessionStorage.setItem(STORAGE_KEY, key);
+                                } catch (err) {
+                                        // ignore storage errors (private browsing, etc.)
+                                }
+                        }
+
+                        function clearStoredKey() {
+                                try {
+                                        sessionStorage.removeItem(STORAGE_KEY);
+                                } catch (err) {
+                                        // ignore
+                                }
+                        }
+
+                        function requestKey() {
+                                var existing = getStoredKey();
+                                if (existing) {
+                                        return existing;
+                                }
+
+                                var apiKey = window.prompt('Enter your Google Maps API key to explore the Hyperlapse demo.', '') || '';
+                                apiKey = apiKey.trim();
+                                if (!apiKey) {
+                                        return null;
+                                }
+
+                                storeKey(apiKey);
+                                return apiKey;
+                        }
+
+                        function loadGoogleMaps() {
+                                if (googleMapsPromise) {
+                                        return googleMapsPromise;
+                                }
+
+                                googleMapsPromise = new Promise(function(resolve, reject) {
+                                        var apiKey = requestKey();
+                                        if (!apiKey) {
+                                                reject(new Error('A Google Maps API key is required to load this demo.'));
+                                                return;
+                                        }
+
+                                        var script = document.createElement('script');
+                                        script.src = 'https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false&libraries=geometry&key=' + encodeURIComponent(apiKey);
+                                        script.async = true;
+
+                                        script.onload = function() {
+                                                resolve();
+                                        };
+
+                                        script.onerror = function() {
+                                                clearStoredKey();
+                                                reject(new Error('Failed to load the Google Maps API. Check your key and network connection.'));
+                                        };
+
+                                        document.head.appendChild(script);
+                                });
+
+                                googleMapsPromise.catch(function(error) {
+                                        setTimeout(function() {
+                                                alert(error.message);
+                                        }, 0);
+                                });
+
+                                return googleMapsPromise;
+                        }
+
+                        window.whenGoogleMapsReady = function(onReady, onError) {
+                                loadGoogleMaps().then(function() {
+                                        if (typeof onReady === 'function') {
+                                                onReady();
+                                        }
+                                }).catch(function(error) {
+                                        if (typeof onError === 'function') {
+                                                onError(error);
+                                        }
+                                });
+                        };
+                })();
+        </script>
         <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
         <script src="js/GSVPano.js"></script>
-	<script src="../src/Hyperlapse.js"></script>
-	<script> 
+        <script src="../src/Hyperlapse.js"></script>
+        <script>
+                window.whenGoogleMapsReady(function() {
+                        function init() {
+                                var pano = document.getElementById('pano');
+                                if (!pano) {
+                                        return;
+                                }
 
-		function init() {
+                                var hyperlapse = new Hyperlapse(pano, {
+                                        lookat: new google.maps.LatLng(37.81409525128964, -122.4775045005249),
+                                        zoom: 1,
+                                        use_lookat: true,
+                                        elevation: 50
+                                });
 
-			var hyperlapse = new Hyperlapse(document.getElementById('pano'), {
-				lookat: new google.maps.LatLng(37.81409525128964,-122.4775045005249),
-				zoom: 1,
-				use_lookat: true,
-				elevation: 50
-			});
+                                hyperlapse.onError = function(e) {
+                                        console.log(e);
+                                };
 
-			hyperlapse.onError = function(e) {
-				console.log(e);
-			};
+                                hyperlapse.onRouteComplete = function() {
+                                        hyperlapse.load();
+                                };
 
-			hyperlapse.onRouteComplete = function(e) {
-				hyperlapse.load();
-			};
+                                hyperlapse.onLoadComplete = function() {
+                                        hyperlapse.play();
+                                };
 
-			hyperlapse.onLoadComplete = function(e) {
-				hyperlapse.play();
-			};
+                                var directions_service = new google.maps.DirectionsService();
 
-			// Google Maps API stuff here...
-			var directions_service = new google.maps.DirectionsService();
+                                var routeRequest = {
+                                        origin: new google.maps.LatLng(37.816480000000006, -122.47825, 37),
+                                        destination: new google.maps.LatLng(37.81195, -122.47773000000001),
+                                        travelMode: google.maps.DirectionsTravelMode.DRIVING
+                                };
 
-			var route = {
-				request:{
-					origin: new google.maps.LatLng(37.816480000000006,-122.47825,37),
-					destination: new google.maps.LatLng(37.81195,-122.47773000000001),
-					travelMode: google.maps.DirectionsTravelMode.DRIVING
-				}
-			};
+                                directions_service.route(routeRequest, function(response, status) {
+                                        if (status === google.maps.DirectionsStatus.OK) {
+                                                hyperlapse.generate({ route: response });
+                                        } else {
+                                                console.log(status);
+                                        }
+                                });
+                        }
 
-			directions_service.route(route.request, function(response, status) {
-				if (status == google.maps.DirectionsStatus.OK) {
-					hyperlapse.generate( {route:response} );
-				} else {
-					console.log(status);
-				}
-			});
+                        if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', init);
+                        } else {
+                                init();
+                        }
+                }, function(error) {
+                        function showError() {
+                                console.error(error);
+                                var pano = document.getElementById('pano');
+                                if (pano) {
+                                        pano.textContent = error && error.message ? error.message : 'Unable to load the Google Maps API.';
+                                        pano.style.display = 'grid';
+                                        pano.style.placeItems = 'center';
+                                        pano.style.fontFamily = 'Helvetica, Arial, sans-serif';
+                                        pano.style.color = '#27304a';
+                                        pano.style.padding = '1.5rem';
+                                }
+                        }
 
-		}
-
-		window.onload = init;
-		
-	</script> 
+                        if (document.readyState === 'loading') {
+                                document.addEventListener('DOMContentLoaded', showError);
+                        } else {
+                                showError();
+                        }
+                });
+        </script> 
 </head> 
 <body> 
 	<div id="pano"></div>
