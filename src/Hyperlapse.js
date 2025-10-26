@@ -180,19 +180,25 @@ var Hyperlapse = function(container, params) {
 	_scene.add( _camera );
 
   // Check if we can use webGL
-  var isWebGL = function () {
+  var supportsWebGL = function () {
     try {
-      return !! window.WebGLRenderingContext
-              && !! document.createElement( 'canvas' ).getContext( 'experimental-webgl' );
-    } catch(e) {
-      console.log('WebGL not available starting with CanvasRenderer');
+      if ( !window.WebGLRenderingContext ) return false;
+      var canvas = document.createElement( 'canvas' );
+      return !!( canvas.getContext( 'webgl' ) || canvas.getContext( 'experimental-webgl' ) );
+    } catch ( e ) {
       return false;
     }
   };
 
-  _renderer = isWebGL() ? new THREE.WebGLRenderer() : new THREE.CanvasRenderer();
-	_renderer.autoClearColor = false;
-	_renderer.setSize( _w, _h );
+  if ( !supportsWebGL() ) {
+    handleError( { message: 'WebGL is required but not supported by this browser.' } );
+    throw new Error( 'WebGL is required but not supported by this browser.' );
+  }
+
+  _renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+        _renderer.autoClear = false;
+        _renderer.setPixelRatio( window.devicePixelRatio || 1 );
+        _renderer.setSize( _w, _h );
 
 	_mesh = new THREE.Mesh(
 		new THREE.SphereGeometry( 500, 60, 40 ),
