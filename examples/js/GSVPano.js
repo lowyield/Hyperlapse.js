@@ -78,9 +78,9 @@ GSVPANO.PanoLoader = function (parameters) {
 		_count = 0;
 		_total = w * h;
 	
-		for( y = 0; y < h; y++) {
-			for( x = 0; x < w; x++) {
-				url = 'http://maps.google.com/cbk?output=tile&panoid=' + panoId + '&zoom=' + _zoom + '&x=' + x + '&y=' + y + '&' + Date.now();
+                for( y = 0; y < h; y++) {
+                        for( x = 0; x < w; x++) {
+                                url = 'https://maps.google.com/cbk?output=tile&panoid=' + panoId + '&zoom=' + _zoom + '&x=' + x + '&y=' + y + '&' + Date.now();
 				(function (x, y) { 
 					var img = new Image();
 					img.addEventListener('load', function () {
