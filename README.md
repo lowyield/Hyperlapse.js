@@ -58,9 +58,12 @@ directions_service.route(route.request, function(response, status) {
 
 ## Dependencies
 
-- [Three.js](https://github.com/mrdoob/three.js) (r57)
-- a modified version of [GSVPano.js](https://github.com/pnitsch/GSVPano.js)
-- [Google Maps API v3.12](https://developers.google.com/maps/documentation/javascript/3.exp/reference)
+- [Three.js](https://github.com/mrdoob/three.js) (r155 / 0.155.0 via unpkg CDN)
+- a modified version of [GSVPano.js](https://github.com/pnitsch/GSVPano.js) (updated for HTTPS tile requests)
+- [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript)
+- [dat.gui](https://github.com/dataarts/dat.gui) (0.7.9 via jsDelivr for the viewer example)
+
+> **Note:** Hyperlapse.js now requires a WebGL-capable browser. Initializing the library on a device without WebGL support will throw an error so the limitation can be handled explicitly by host applications.
 
   
 ## API Docs 
